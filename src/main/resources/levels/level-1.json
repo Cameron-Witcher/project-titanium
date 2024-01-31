@@ -1,0 +1,44 @@
+{
+  "darkness": 0,
+  "background": "background1",
+  "objects": [
+    {
+      "type": "PLATFORM",
+      "width": 5000,
+      "location": {
+        "x": 700,
+        "y": 1000
+      }
+    },
+    {
+      "type": "PLATFORM",
+      "width": 20,
+      "location": {
+        "x": 750,
+        "y": 940
+      }
+    },
+    {
+      "type": "PLATFORM",
+      "width": 20,
+      "location": {
+        "x": 770,
+        "y": 900
+      }
+    },
+    {
+      "type": "PLATFORM",
+      "width": 20,
+      "location": {
+        "x": 900,
+        "y": 980
+      }
+    }
+  ],
+  "player": {
+    "location": {
+      "x": 800,
+      "y": 950
+    }
+  }
+}

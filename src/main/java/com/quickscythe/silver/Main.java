@@ -1,6 +1,6 @@
 package com.quickscythe.silver;
 
-import com.quickscythe.silver.gui.Window;
+import com.quickscythe.silver.game.Window;
 
 public class Main {
 

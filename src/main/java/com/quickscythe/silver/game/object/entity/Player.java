@@ -1,24 +1,35 @@
 package com.quickscythe.silver.game.object.entity;
 
+import com.quickscythe.silver.game.Camera;
+import com.quickscythe.silver.utils.AnimationDirector;
+import com.quickscythe.silver.game.controllers.GamepadController;
+import com.quickscythe.silver.game.controllers.KeyboardController;
 import com.quickscythe.silver.game.object.GameObject;
-import com.quickscythe.silver.gui.Camera;
+import com.quickscythe.silver.game.object.Illuminant;
 import com.quickscythe.silver.utils.Direction;
 import com.quickscythe.silver.utils.GameUtils;
 import com.quickscythe.silver.utils.Location;
+import com.quickscythe.silver.utils.Resources;
 
 import java.awt.*;
-import java.awt.event.KeyEvent;
 import java.util.List;
 
-public class Player extends Entity implements Controllable {
+public class Player extends Entity implements Illuminant {
 
-    Rectangle collision_box;
+    public AnimationDirector animationController = new AnimationDirector(Resources.getImage("sprites/block_man.png"), 32, 32);
 
+    Direction last_direction = Direction.RIGHT;
 
     public Player(Location location) {
         super(location);
-        size = 10;
-        collision_box = new Rectangle((int) (getBounds().getX() - 1), (int) (getBounds().getY() - 1), (int) (getBounds().getWidth() + 2), (int) (getBounds().getHeight() + 2));
+        this.width = 50;
+        this.height = 50;
+        collidable = true;
+        controllers.add(new KeyboardController());
+        controllers.add(new GamepadController(0));
+        animationController.setAnimation(12);
+        collision_box.setSize((int) (width - 14), (int) (height - 12));
+
 //        cached_images.put(0D, Resources.getImage("player.png"));
 //        cached_images.put(45D, Resources.getImage("player45.png"));
 //        cached_images.put(90D, Resources.getImage("player90.png"));
@@ -31,104 +42,61 @@ public class Player extends Entity implements Controllable {
     }
 
     @Override
+    public void updateCollisionBox() {
+        collision_box.setLocation((int) (predictX() - (width - 14) / 2), (int) (predictY() - (height) / 2) +12);
+//        collision_box.setSize((int) (width - 14), (int) (height - 8));
+    }
+
+    @Override
     public void update(List<GameObject> objects) {
+        if(getLocation().getX() < 640)
+            getLocation().setX(640);
 
-        collisions.clear();
-        intersections.clear();
-        Thread loop = new Thread(()->{
-            for (GameObject object : objects)
-                if (collision_box.getBounds().intersects(object.getBounds()) && !object.equals(this))
-                    checkCollisionDirection(object);
-        });
-        loop.start();
-
+//        collision_box.setLocation((int) (predictX() - (getBounds().getWidth() + 2) / 2), (int) (predictY() - (getBounds().getHeight() + 2) / 2));
+//        collision_box.setSize((int) (getBounds().getWidth() + 2), (int) (getBounds().getHeight() + 2));
 
         super.update(objects);
-
+        if (Math.abs(velocity.getX()) < accel) animationController.setAnimation(0);
+        else animationController.setAnimation(1);
+        if (velocity.getX() > 0) last_direction = Direction.LEFT;
+        if (velocity.getX() < 0) last_direction = Direction.RIGHT;
     }
 
     @Override
     public void draw(Graphics g, Camera camera) {
-        collision_box.setLocation((int) getLocation().getX() - collision_box.width / 2, (int) getLocation().getY() - collision_box.height / 2);
+        image = animationController.getFrame();
+        if (last_direction.equals(Direction.RIGHT)) {
+            image = Resources.flipImage(image);
+        }
+
+//        animationController.setAnimation(6);d
         super.draw(g, camera);
-        g.setColor(Color.MAGENTA);
-        if (GameUtils.debug()) g.drawRect(collision_box.x, collision_box.y, collision_box.width, collision_box.height);
-//        g.drawRect((int) (getRelativeX(camera) - (getBounds().getWidth() / 2)), (int) (getRelativeY(camera) - (getBounds().getHeight() / 2)), (int) getBounds().getWidth(), (int) getBounds().getHeight());
-    }
-
-    private void checkCollisionDirection(GameObject object) {
-
-        if (predictX() + getBounds().getWidth() / 2 > object.getBounds().getMinX() && predictX() + getBounds().getWidth() / 2 < object.getBounds().getMinX() + max_speed) {
-            if (!collisions.contains(Direction.RIGHT)) collisions.add(Direction.RIGHT);
-            getLocation().setX(object.getLocation().getX() - (object.getBounds().getWidth() / 2) - (getBounds().getWidth() / 2));
-
-        }
-        if (predictX() - getBounds().getWidth() / 2 < object.getBounds().getMaxX() && predictX() - getBounds().getWidth() / 2 > object.getBounds().getMaxX() - max_speed) {
-            if (!collisions.contains(Direction.LEFT)) collisions.add(Direction.LEFT);
-            getLocation().setX(object.getLocation().getX() + (object.getBounds().getWidth() / 2) + (getBounds().getWidth() / 2) + 0);
-        }
-        if (predictY() - getBounds().getHeight() / 2 < object.getBounds().getMaxY() && predictY() - getBounds().getHeight() / 2 > object.getBounds().getMaxY() - max_speed) {
-            if (!collisions.contains(Direction.UP)) collisions.add(Direction.UP);
-            getLocation().setY(object.getLocation().getY() + (object.getBounds().getHeight() / 2) + (getBounds().getHeight() / 2)-1);
-        }
+        if (GameUtils.debug()) {
+            g.drawString("Player Location: " + getLocation().toString() + "~(" + getRelativeX(camera) + ", " + getRelativeY(camera) + ")", 0, g.getFontMetrics().getHeight() * 5);
+            g.drawString("Player Velocity: " + getVelocity().toString(), 0, g.getFontMetrics().getHeight() * 6);
+            g.drawString("Player Directions: ", 0, g.getFontMetrics().getHeight() * 7);
+            int i = 8;
+            for (Direction direction : getDirections()) {
+                g.drawString(" - " + direction.name(), 0, g.getFontMetrics().getHeight() * i);
+                i = i + 1;
+            }
+            g.drawString("Player Collisions: ", 0, g.getFontMetrics().getHeight() * i);
+            for (Direction direction : getCollisions()) {
+                i = i + 1;
+                g.drawString(" - " + direction.name(), 0, g.getFontMetrics().getHeight() * i);
 
 
-    }
-
-    private double predictX() {
-        return getLocation().getX() + velocity.getX();
-    }
-
-    private double predictY() {
-        return getLocation().getY() + velocity.getY();
-    }
-
-    @Override
-    public void keyPressed(KeyEvent e) {
-        if (e.getKeyCode() == KeyEvent.VK_W) {
-            directions.remove(Direction.UP);
-            directions.add(Direction.UP);
-//            if (Math.abs(getVelocity().getY()) < max_speed) velocity.add(0, accel);
-        }
-        if (e.getKeyCode() == KeyEvent.VK_A) {
-            directions.remove(Direction.LEFT);
-            directions.add(Direction.LEFT);
-//            if (Math.abs(getVelocity().getX()) < max_speed) velocity.add(-accel, 0);
-        }
-        if (e.getKeyCode() == KeyEvent.VK_S) {
-            directions.remove(Direction.DOWN);
-            directions.add(Direction.DOWN);
-//            if (Math.abs(getVelocity().getY()) < max_speed) velocity.add(0, -accel);
-        }
-        if (e.getKeyCode() == KeyEvent.VK_D) {
-            directions.remove(Direction.RIGHT);
-            directions.add(Direction.RIGHT);
-//            if (Math.abs(getVelocity().getX()) < max_speed) velocity.add(accel, 0);
+            }
         }
     }
 
     @Override
-    public void keyReleased(KeyEvent e) {
-        if (e.getKeyCode() == KeyEvent.VK_W) {
-            directions.remove(Direction.UP);
-//            velocity.setY(0);
-        }
-        if (e.getKeyCode() == KeyEvent.VK_A) {
-            directions.remove(Direction.LEFT);
-//            velocity.setX(0);
-        }
-        if (e.getKeyCode() == KeyEvent.VK_S) {
-            directions.remove(Direction.DOWN);
-//            velocity.setY(0);
-        }
-        if (e.getKeyCode() == KeyEvent.VK_D) {
-            directions.remove(Direction.RIGHT);
-//            velocity.setX(0);
-        }
-
+    public boolean on() {
+        return true;
     }
 
-    public List<Direction> getCollisions() {
-        return collisions;
+    @Override
+    public int getBrightness() {
+        return 50;
     }
 }

@@ -1,6 +1,6 @@
 package com.quickscythe.silver.game.object;
 
-import com.quickscythe.silver.gui.Camera;
+import com.quickscythe.silver.game.Camera;
 import com.quickscythe.silver.utils.GameUtils;
 import com.quickscythe.silver.utils.Location;
 
@@ -12,44 +12,62 @@ import java.util.List;
 public class GameObject {
 
     protected BufferedImage image = null;
-    Location location;
-    protected int size = 10;
-    Rectangle bounds;
     protected List<GameObject> intersections = new ArrayList<>();
+    protected boolean collidable = false;
+    protected int width = 10;
+    protected int height = 10;
+    Location location;
+    Rectangle bounds;
 
     public GameObject(Location location) {
         this.location = location;
-        this.bounds = new Rectangle((int) location.getX() - (size / 2), (int) location.getY() - (size / 2), size, size);
+        this.bounds = new Rectangle((int) location.getX() - (width / 2), (int) location.getY() - (height / 2), width, height);
     }
 
     public void update(List<GameObject> objects) {
-        intersections.clear();
-        for (GameObject object : objects)
-            if (getBounds().intersects(object.getBounds()) && !object.equals(this))
-                intersections.add(object);
+        bounds.setBounds((int) (location.getX() - ((width / 2))), (int) (location.getY() - ((height / 2))), (int) (width), (int) (height));
     }
 
     public void draw(Graphics g, Camera camera) {
-        bounds.setBounds((int) (location.getX() - ((size / 2) )), (int) (location.getY() - ((size / 2) )), (int) (size ), (int) (size ));
 
-        if (image == null)
-            g.fillRect((int) (getRelativeX(camera) - ((bounds.getWidth() / 2)* camera.getScale())), (int) (getRelativeY(camera) - ((bounds.getHeight() / 2)* camera.getScale())), (int) (bounds.getWidth()* camera.getScale()), (int) (bounds.getHeight()* camera.getScale()));
-        else {
-            g.drawImage(image, (int) (bounds.getX() - camera.getViewport().getX()), (int) (bounds.getY() - camera.getViewport().getY()), (int) bounds.getWidth(), (int) bounds.getHeight(), null);
+
+        if(camera!=null) {
+            if (image == null)
+                g.fillRect((int) (getRelativeX(camera) - getRelativeWidth(camera) / 2), (int) (getRelativeY(camera) - getRelativeHeight(camera) / 2), getRelativeWidth(camera), getRelativeHeight(camera));
+            else {
+                g.drawImage(image, (int) (getRelativeX(camera) - getRelativeWidth(camera) / 2), (int) (getRelativeY(camera) - getRelativeHeight(camera) / 2), getRelativeWidth(camera), getRelativeHeight(camera), null);
+            }
         }
 
         if (GameUtils.debug()) {
+
             g.setColor(Color.RED);
             g.drawRect(bounds.x, bounds.y, bounds.width, bounds.height);
         }
     }
 
+    public int getRelativeWidth(Camera camera){
+        return (int) (bounds.getWidth());
+    }
+
+    public int getRelativeHeight(Camera camera){
+        return (int) (bounds.getHeight());
+
+    }
+
+    public void setImage(BufferedImage image){
+        this.image = image;
+
+    }
+
     public int getRelativeX(Camera camera) {
-        return (int) (((bounds.getX() + (size / 2) ) - camera.getViewport().getX())* camera.getScale());
+        return (int) (getLocation().getX() - (camera.getViewport().getBounds().getMinX()) );
+//        return (int) (((bounds.getX() + (width / 2)) - camera.getViewport().getX()) * camera.getScaleX());
     }
 
     public int getRelativeY(Camera camera) {
-        return (int) (((bounds.getY() + (size / 2) ) - camera.getViewport().getY())* camera.getScale());
+        return (int) (getLocation().getY() - (camera.getViewport().getBounds().getMinY()) );
+//        return (int) (((bounds.getY() + (height / 2)) - camera.getViewport().getY()) * camera.getScaleY());
     }
 
     public Location getLocation() {
@@ -58,5 +76,9 @@ public class GameObject {
 
     public Rectangle getBounds() {
         return bounds;
+    }
+
+    public boolean isCollidable() {
+        return collidable;
     }
 }
